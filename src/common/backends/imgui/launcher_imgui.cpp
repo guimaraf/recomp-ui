@@ -4344,6 +4344,14 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
         }
     }
 
+    row_label_right("Enable Log", th, cb);
+    bool enable_log = m->s.enable_log != 0;
+    if (ImGui::Checkbox("##enable_log", &enable_log))
+        m->s.enable_log = enable_log ? 1 : 0;
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+        ImGui::SetTooltip("Shows the diagnostic console window. Logging stays "
+                          "active when the window is hidden.");
+
     if (m->has_skip_fmv) {
         row_label_right("Skip FMVs", th, cb);
         bool sk = m->s.auto_skip_fmv != 0;

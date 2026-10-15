@@ -52,6 +52,7 @@ static const Setting kSettings[] = {
     OPTIONAL("Sound", "Msu1Enabled", msu1_enabled, BOOLEAN, 0, 1, msu1_supported),
     OPTIONAL("Sound", "Msu1Dir", msu1_dir, TEXT, 0, 0, msu1_supported),
     BOOL("General", "SkipLauncher", skip_launcher),
+    BOOL("General", "EnableLog", enable_log),
     OPTIONAL("General", "RunAhead", run_ahead, NUMBER, 0,
              RECOMP_LAUNCHER_RUN_AHEAD_MAX, has_run_ahead),
     OPTIONAL("Rewind", "Enabled", rewind_enabled, BOOLEAN, 0, 1, has_rewind_depth),

@@ -1568,6 +1568,9 @@ struct RecompLauncherCSettings {
      * additively; a zero-initialized host reads as unset. */
     int  quality_preset;
     int  quality_base;
+    /* Whether the host's diagnostic console window is visible.
+     * 0 = hidden, 1 = visible. Appended for ABI stability. */
+    int  enable_log;
 };
 #define RECOMP_LAUNCHER_HAS_ZAPPER_SETTINGS 1
 
