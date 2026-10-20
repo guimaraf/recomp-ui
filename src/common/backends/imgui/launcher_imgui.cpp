@@ -3912,6 +3912,16 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
     eyebrow("DISPLAY");
     draw_quality_preset_row(m, th);
 
+    if (m->s.player_nameplates != 0) {
+        row_label_right("Show player names", th, ImGui::GetFrameHeight());
+        bool show = m->s.player_nameplates > 0;
+        if (ImGui::Checkbox("##player_nameplates", &show))
+            m->s.player_nameplates = show ? 1 : -1;
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+            ImGui::SetTooltip("Show both player names during gameplay and replay.\n"
+                              "Available with the OpenGL renderer. Applies on Play.");
+    }
+
     if (!any_deep_display(m)) {
         // ---- legacy minimal surface (SNES/NES etc.) ---------------------------
         // Labels at the left edge, controls at the right (row_label_right), so
@@ -6633,11 +6643,18 @@ bool np_prepare_guest_bind(char* out, size_t cap, char* status, size_t status_ca
     return true;
 }
 
+/* LAN and Join Direct bypass the server-connect path. Publish the editable
+ * identity before seating too, so their JOIN/host announcement has the name. */
+void np_publish_player_name(LauncherModel* m) {
+    const auto* np = np_cb(m);
+    if (np && np->set_player_name && m->s.netplay_player_name[0])
+        np->set_player_name(np->ctx, m->s.netplay_player_name);
+}
+
 void np_connect_and_list(LauncherModel* m) {
     const auto* np = np_cb(m);
     if (!np) return;
-    if (np->set_player_name && m->s.netplay_player_name[0])
-        np->set_player_name(np->ctx, m->s.netplay_player_name);
+    np_publish_player_name(m);
     const bool already = np->connected && np->connected(np->ctx);
     const bool in_flight = np->connecting && np->connecting(np->ctx);
     if (np->connect && !already && !in_flight)
@@ -7750,6 +7767,7 @@ void draw_netplay_direct_modal(LauncherModel* m, const LauncherTheme& th) {
                               m->netplay_direct_port[0] ? m->netplay_direct_port : "7777");
                 if (np_prepare_guest_bind(guest_bind, sizeof(guest_bind),
                                           m->netplay_status, sizeof(m->netplay_status))) {
+                np_publish_player_name(m);
                 const int rc = np->join(np->ctx, lobby_id, m->netplay_password, guest_bind);
                 if (rc == 0) {
                     m->netplay_local_room = true;
@@ -8111,6 +8129,7 @@ void draw_netplay_host_modal(LauncherModel* m, const LauncherTheme& th) {
                     if (np->input_delay_set)
                         (void)np->input_delay_set(np->ctx,
                                                   m->netplay_lobby_input_delay);
+                    np_publish_player_name(m);
                     const int rc = np->create(np->ctx, lobby, endpoint,
                                               m->netplay_host_password, &m->s,
                                               m->netplay_lan_only ? 1 : 0,
@@ -8189,6 +8208,7 @@ void draw_netplay_password_modal(LauncherModel* m, const LauncherTheme& th) {
                 char guest_bind[64];
                 if (np_prepare_guest_bind(guest_bind, sizeof(guest_bind),
                                           m->netplay_status, sizeof(m->netplay_status))) {
+                np_publish_player_name(m);
                 int rc = np->join(np->ctx, row.lobby_id, m->netplay_password, guest_bind);
                 if (rc == 0) {
                     if (strncmp(row.lobby_id, "lan:", 4) == 0) {
@@ -10622,6 +10642,7 @@ void np_join_selected(LauncherModel* m) {
         if (!np_prepare_guest_bind(guest_bind, sizeof(guest_bind),
                                    m->netplay_status, sizeof(m->netplay_status)))
             return;
+        np_publish_player_name(m);
         const int rc = np->join(np->ctx, row.lobby_id, "", guest_bind);
         if (rc == 0) {
             if (strncmp(row.lobby_id, "lan:", 4) == 0) {

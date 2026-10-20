@@ -1570,7 +1570,11 @@ struct RecompLauncherCSettings {
      * additively; a zero-initialized host reads as unset. */
     int  quality_preset;
     int  quality_base;
+    /* Optional host HUD: 0 unsupported, 1 enabled, -1 disabled. Appended for
+     * ABI stability; unrelated hosts keep the control hidden. */
+    int  player_nameplates;
 };
+#define RECOMP_LAUNCHER_HAS_PLAYER_NAMEPLATES 1
 #define RECOMP_LAUNCHER_HAS_ZAPPER_SETTINGS 1
 
 /* Largest run-ahead depth the launcher will offer for
