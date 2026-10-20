@@ -47,6 +47,8 @@
 #include "imgui_impl_opengl3.h"
 
 #include <atomic>
+#include <chrono>
+#include <thread>
 #if defined(_MSC_VER)
   #include <intrin.h>
 #endif
@@ -14734,9 +14736,18 @@ extern "C" LngAction launcher_backend_run(LauncherPlatform* p,
     // that scale so the path can be exercised on a 100% display; nothing here
     // reads the env var any more.
     bool first_present_marked = false;
+    /* VSync follows the monitor (possibly 144/240 Hz), and an event wait
+     * returns immediately under mouse/controller traffic. Cap the launcher
+     * independently, with no catch-up burst after a slow frame. */
+    using LauncherClock = std::chrono::steady_clock;
+    const auto launcher_frame_period = std::chrono::duration_cast<LauncherClock::duration>(
+        std::chrono::duration<double>(1.0 / 60.0));
+    auto launcher_next_frame = LauncherClock::now();
 
     while ((m->action == LNG_ACTION_NONE && !p->should_quit) ||
            launch_commit.job.pending()) {
+        std::this_thread::sleep_until(launcher_next_frame);
+        launcher_next_frame = LauncherClock::now() + launcher_frame_period;
         /* finish() joins before model/provider access, returning the borrowed
          * ctx to the UI. A queued close wins even when commit succeeded. */
         const auto completion = launch_commit.finish(launch_commit.close_requested || p->should_quit);
@@ -14762,7 +14773,7 @@ extern "C" LngAction launcher_backend_run(LauncherPlatform* p,
         }
 
         SDL_Event ev;
-        if (SDL_WaitEventTimeout(&ev, 16)) do {
+        if (SDL_PollEvent(&ev)) do {
             /* Window coordinates -> logical units, before anything reads the
              * event. No-op unless the platform layer synthesized the split. */
             scale_mouse_event(ev, p->input_scale);
@@ -14810,6 +14821,7 @@ extern "C" LngAction launcher_backend_run(LauncherPlatform* p,
         } while (SDL_PollEvent(&ev));
 
         launcher_platform_refresh_metrics(p);
+        launcher_model_poll_disc_verify(m);
         /* Also when a never-seen emoji was registered last frame: the atlas
          * is static, so it is rebuilt once here, before NewFrame. */
         if (applied_scale != p->display_scale || g_emoji_atlas_dirty) {

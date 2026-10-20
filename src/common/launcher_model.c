@@ -1427,13 +1427,21 @@ void launcher_model_set_rom(LauncherModel* m, const char* path) {
 // a "not recognized" dead end. No-op for verify.mode==0 systems (SNES) — the
 // CRC/SHA line above already covers them and m->verify stays zeroed.
 static void run_verify(LauncherModel* m) {
+    m->disc_verify_pending = false;
     if (!m->profile || m->profile->verify.mode != 1) return;
     memset(&m->verify, 0, sizeof(m->verify));
     // Host disc-verify callback (REAL serial/region/ISO/verdict) takes
     // precedence — re-run here on every ROM/disc change.
     if (m->disc_verify_cb && m->rom_present) {
         RecompLauncherCDiscVerify dv; memset(&dv, 0, sizeof(dv));
-        if (m->disc_verify_cb(m->rom_full, &dv)) {
+        const int result = m->disc_verify_cb(m->rom_full, &dv);
+        if (result == 2) {
+            m->disc_verify_pending = true;
+            safe_copy(m->verify.netplay_detail, sizeof(m->verify.netplay_detail),
+                      "Verifying disc...");
+            return;
+        }
+        if (result == 1) {
             safe_copy(m->verify.serial, sizeof(m->verify.serial), dv.serial);
             safe_copy(m->verify.region, sizeof(m->verify.region), dv.region);
             m->verify.iso_ok  = dv.iso_ok != 0;
@@ -1465,6 +1473,10 @@ static void run_verify(LauncherModel* m) {
         m->verify.iso_ok  = false;
         m->verify.verdict = 0;   // none
     }
+}
+
+void launcher_model_poll_disc_verify(LauncherModel* m) {
+    if (m && m->disc_verify_pending) run_verify(m);
 }
 
 const char* launcher_model_rom_path(const LauncherModel* m) {

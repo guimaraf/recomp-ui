@@ -1771,7 +1771,9 @@ typedef struct RecompLauncherCGameInfo {
     // callback whenever the user changes the disc / a memory card (matching the
     // legacy launcher). NULL => the launcher falls back to a placeholder verdict
     // / empty card summary. `disc_verify` gets the current disc path; return 1
-    // if `out` was filled. `memcard_inspect` gets one slot's card path; return
+    // if `out` was filled, or 2 while asynchronous verification is pending
+    // (the ImGui backend polls again; Play remains disabled).
+    // `memcard_inspect` gets one slot's card path; return
     // 1 if `out` was filled.
     int (*disc_verify)(const char* disc_path, RecompLauncherCDiscVerify* out);
     int (*memcard_inspect)(const char* card_path, RecompLauncherCMemcard* out);

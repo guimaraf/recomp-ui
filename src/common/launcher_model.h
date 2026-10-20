@@ -221,6 +221,7 @@ typedef struct {
     // When non-NULL these drive the REAL disc verdict + memcard block usage
     // (re-run on every disc/card change) instead of the placeholder synthesis.
     int (*disc_verify_cb)(const char* disc_path, RecompLauncherCDiscVerify* out);
+    bool disc_verify_pending; /* callback returned 2; Play stays disabled */
     int (*import_sbi_cb)(const char*, const char*, char*, size_t, char*, size_t);
     int (*memcard_inspect_cb)(const char* card_path, RecompLauncherCMemcard* out);
     int (*bios_verify_cb)(const char* bios_path, RecompLauncherCBiosVerify* out);
@@ -1218,6 +1219,7 @@ bool launcher_model_can_advance_toolchain(const LauncherModel* m);
 void launcher_model_skip_toolchain_update(LauncherModel* m);
 // Poll prepare/rebuild/toolchain job; call once per frame while setup_preparing.
 void launcher_model_poll_prepare_disc(LauncherModel* m);
+void launcher_model_poll_disc_verify(LauncherModel* m);
 // Dismiss the wizard once can_finish_setup is true (keeps dashboard).
 void launcher_model_finish_setup(LauncherModel* m);
 
