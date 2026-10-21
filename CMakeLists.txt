@@ -608,6 +608,19 @@ if(BUILD_TESTING)
     set_tests_properties(recomp-ui-launcher-in-session PROPERTIES
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/launcher-in-session-test")
 
+    add_executable(recomp-ui-launcher-offline-names-test
+        tests/launcher_offline_names_test.c
+        src/common/launcher_model.c
+        src/common/crc32.c
+        src/common/sha1.c
+        src/common/sha256.c
+        src/common/ips_patch.c
+        src/consoles/psx/memcard_format.c)
+    target_include_directories(recomp-ui-launcher-offline-names-test PRIVATE
+        src src/common src/consoles/psx)
+    add_test(NAME recomp-ui-launcher-offline-names
+             COMMAND $<TARGET_FILE:recomp-ui-launcher-offline-names-test>)
+
     add_executable(recomp-ui-launcher-settings-test
         tests/launcher_settings_test.c
         src/common/launcher_ng_capi.c

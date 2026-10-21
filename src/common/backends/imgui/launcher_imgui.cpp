@@ -3764,6 +3764,7 @@ bool any_deep_display(const LauncherModel* m) {
 // Gated exactly like the row itself so the SNES legacy surface stays pinned to
 // the fixed height (byte-identical to before this console existed).
 bool video_card_grows(const LauncherModel* m) {
+    if (m->s.player_nameplates != 0) return true;
     if (any_deep_display(m)) return true;
     if (has_display_aspect_row(m)) return true;
     if (m->has_shader) return true;
@@ -3908,6 +3909,31 @@ void draw_quality_preset_row(LauncherModel* m, const LauncherTheme& th) {
     }
 }
 
+/* ImGui supplies valid UTF-8. Limit characters, not bytes, including paste;
+ * combining accents belong to the preceding letter, like the nameplates. */
+static int offline_player_name_edit(ImGuiInputTextCallbackData* data) {
+    int at = 0;
+    unsigned characters = 0;
+    while (at < data->BufTextLen) {
+        const int start = at;
+        const auto first = static_cast<unsigned char>(data->Buf[at++]);
+        unsigned cp = first;
+        const int extra = first < 0x80 ? 0 : first < 0xE0 ? 1 : first < 0xF0 ? 2 : 3;
+        if (extra) {
+            cp &= (1u << (6 - extra)) - 1;
+            for (int i = 0; i < extra && at < data->BufTextLen; ++i)
+                cp = (cp << 6) | (static_cast<unsigned char>(data->Buf[at++]) & 0x3F);
+        }
+        const bool accent = cp >= 0x300 && cp <= 0x36F;
+        if ((!accent && characters == 8) || at > 60) {
+            data->DeleteChars(start, data->BufTextLen - start);
+            break;
+        }
+        if (!accent) ++characters;
+    }
+    return 0;
+}
+
 void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
     eyebrow("DISPLAY");
     draw_quality_preset_row(m, th);
@@ -3920,6 +3946,35 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
             ImGui::SetTooltip("Show both player names during gameplay and replay.\n"
                               "Available with the OpenGL renderer. Applies on Play.");
+        if (show && m->save_offline_player_names_cb) {
+            ImGui::Spacing();
+            ImGui::TextUnformatted("Offline Names");
+            for (int i = 0; i < 2; ++i) {
+                row_label_right(i == 0 ? "Player 1" : "Player 2", th, px(SETTINGS_CTRL_W));
+                ImGui::SetNextItemWidth(px(SETTINGS_CTRL_W));
+                if (ImGui::InputText(i == 0 ? "##offline_player_1" : "##offline_player_2",
+                                     m->offline_player_names_edit[i],
+                                     sizeof(m->offline_player_names_edit[i]),
+                                     ImGuiInputTextFlags_CallbackEdit,
+                                     offline_player_name_edit)) {
+                    m->offline_player_names_save_status = 0;
+                    m->offline_player_names_error[0] = '\0';
+                }
+            }
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextColored(col(th.text_muted), "Up to 8 characters each. Save before starting a game.");
+            ImGui::PopTextWrapPos();
+            if (ImGui::Button("Save##offline_player_names"))
+                launcher_model_save_offline_player_names(m);
+            if (m->offline_player_names_save_status > 0)
+                ImGui::TextColored(col(th.text_muted), "Offline names saved.");
+            else if (m->offline_player_names_save_status < 0) {
+                ImGui::PushTextWrapPos(0.0f);
+                ImGui::TextColored(col(th.warn), "%s", m->offline_player_names_error);
+                ImGui::PopTextWrapPos();
+            }
+            ImGui::Spacing();
+        }
     }
 
     if (!any_deep_display(m)) {

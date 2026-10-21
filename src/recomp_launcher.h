@@ -1573,8 +1573,11 @@ struct RecompLauncherCSettings {
     /* Optional host HUD: 0 unsupported, 1 enabled, -1 disabled. Appended for
      * ABI stability; unrelated hosts keep the control hidden. */
     int  player_nameplates;
+    /* Last explicitly saved offline names. Draft edits never enter Settings. */
+    char offline_player_names[2][64];
 };
 #define RECOMP_LAUNCHER_HAS_PLAYER_NAMEPLATES 1
+#define RECOMP_LAUNCHER_HAS_OFFLINE_PLAYER_NAMES 1
 #define RECOMP_LAUNCHER_HAS_ZAPPER_SETTINGS 1
 
 /* Largest run-ahead depth the launcher will offer for
@@ -2382,6 +2385,11 @@ typedef struct RecompLauncherCGameInfo {
     const char* const* texture_filter_labels;
     const int*         texture_filter_values;
     int                num_texture_filters;
+    /* Optional immediate persistence for offline names (max 8 characters).
+     * Return 0 only after saving; otherwise fill error. Online identity is
+     * independent. NULL hides the offline editor on unrelated hosts. */
+    int (*save_offline_player_names)(const char* left, const char* right,
+                                     char* error, size_t error_cap);
 } RecompLauncherCGameInfo;
 
 /* RecompLauncherCGameInfo carries texture_filter_labels / _values. */

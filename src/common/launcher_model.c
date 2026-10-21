@@ -603,6 +603,13 @@ void launcher_model_init(LauncherModel* m,
     }
 
     if (io) m->s = *io;
+    if (game) m->save_offline_player_names_cb = game->save_offline_player_names;
+    for (int i = 0; i < 2; ++i) {
+        m->s.offline_player_names[i][63] = '\0';
+        snprintf(m->offline_player_names_edit[i],
+                 sizeof(m->offline_player_names_edit[i]), "%s",
+                 m->s.offline_player_names[i]);
+    }
     if (m->s.netplay_view_index < 0 || m->s.netplay_view_index >= m->num_netplay_view_labels)
         m->s.netplay_view_index = 0;
     /* Seed the selected disc from the host's persisted setting BEFORE the ROM
@@ -1532,9 +1539,31 @@ void launcher_model_request_restore_defaults(LauncherModel* m) {
     m->defaults_modal_open = true;
 }
 
+bool launcher_model_save_offline_player_names(LauncherModel* m) {
+    if (!m || !m->save_offline_player_names_cb) return false;
+    m->offline_player_names_error[0] = '\0';
+    if (m->save_offline_player_names_cb(
+            m->offline_player_names_edit[0], m->offline_player_names_edit[1],
+            m->offline_player_names_error, sizeof(m->offline_player_names_error)) != 0) {
+        m->offline_player_names_save_status = -1;
+        if (!m->offline_player_names_error[0])
+            snprintf(m->offline_player_names_error, sizeof(m->offline_player_names_error),
+                     "Could not save offline names. Please try again.");
+        return false;
+    }
+    memcpy(m->s.offline_player_names, m->offline_player_names_edit,
+           sizeof(m->s.offline_player_names));
+    m->offline_player_names_save_status = 1;
+    return true;
+}
+
 void launcher_model_restore_defaults(LauncherModel* m) {
     if (!launcher_model_can_restore_defaults(m)) return;
+    char saved_names[2][64];
+    memcpy(saved_names, m->s.offline_player_names, sizeof(saved_names));
     m->s = m->default_settings;
+    /* Reset graphics/input defaults without undoing an explicit name Save. */
+    memcpy(m->s.offline_player_names, saved_names, sizeof(saved_names));
     {
         int d = m->s.rewind_depth;
         if (d != 50 && d != 100 && d != 150 && d != 200)

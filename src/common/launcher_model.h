@@ -716,7 +716,14 @@ typedef struct {
     char      pad_binds[LNG_MAX_PLAYERS][LNG_MAX_BUTTONS][32];
     char      camera_binds[LNG_CAMERA_BIND_COUNT][32];
     char      hotkeys[LNG_HK_COUNT][32];    // [KeyMap] value strings, e.g. "Ctrl+R"
+    char      offline_player_names_edit[2][64];
+    int       offline_player_names_save_status; /* 0 edited/idle, 1 saved, -1 failed */
+    char      offline_player_names_error[256];
+    int (*save_offline_player_names_cb)(const char*, const char*, char*, size_t);
 } LauncherModel;
+
+/* Only a successful host save promotes draft names into committed Settings. */
+bool launcher_model_save_offline_player_names(LauncherModel* m);
 
 // Build the model from the inbound C ABI structs. `initial_rom` may be NULL.
 void launcher_model_init(LauncherModel* m,
