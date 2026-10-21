@@ -20,6 +20,7 @@
 #endif
 
 #include <cfloat>
+#include <cstdio>
 #include <cstdint>
 #include <algorithm>
 #include <filesystem>
@@ -211,7 +212,7 @@ void plate(ImDrawList *draw, const char *name, bool right, const int r[4]) {
     draw->AddText(font, size, at, IM_COL32(246, 248, 252, 255), name);
 }
 // Phase one is a layout preview: no match/round events are counted here.
-void wins_placeholder(ImDrawList *draw, bool right, const int r[4]) {
+void wins_counter(ImDrawList *draw, bool right, uint32_t wins, const int r[4]) {
     const float sx = r[2] / 512.0f, sy = r[3] / 240.0f;
     const float width = 26 * sx, height = 12 * sy, slant = 7 * sx;
     const float name_width = 102 * sx, gap = 4 * sx;
@@ -231,11 +232,18 @@ void wins_placeholder(ImDrawList *draw, bool right, const int r[4]) {
     draw->AddPolyline(points, 4, IM_COL32(159, 169, 182, 215),
                       ImDrawFlags_Closed, std::max(.8f, .45f * sy));
     ImFont *font = ImGui::GetFont();
-    const float size = 9.6f * sy;
-    const ImVec2 text = font->CalcTextSizeA(size, FLT_MAX, 0, "0");
+    char value[16];
+    std::snprintf(value, sizeof value, "%u", static_cast<unsigned>(wins));
+    float size = 9.6f * sy;
+    ImVec2 text = font->CalcTextSizeA(size, FLT_MAX, 0, value);
+    const float available = width - 2 * slant - 2 * sx;
+    if (text.x > available && text.x > 0) {
+        size *= available / text.x;
+        text = font->CalcTextSizeA(size, FLT_MAX, 0, value);
+    }
     const ImVec2 at(x + (width - text.x) * .5f, y + (height - text.y) * .5f);
-    draw->AddText(font, size, ImVec2(at.x, at.y + .5f * sy), IM_COL32(0, 0, 0, 220), "0");
-    draw->AddText(font, size, at, IM_COL32(255, 238, 32, 255), "0");
+    draw->AddText(font, size, ImVec2(at.x, at.y + .5f * sy), IM_COL32(0, 0, 0, 220), value);
+    draw->AddText(font, size, at, IM_COL32(255, 238, 32, 255), value);
 }
 }
 
@@ -268,8 +276,8 @@ extern "C" void recomp_ui_psx_nameplates_draw(const PsxHostNameplates *labels,
     draw->PushClipRect(ImVec2((float)r[0], (float)r[1]), ImVec2((float)(r[0]+r[2]), (float)(r[1]+r[3])), true);
     plate(draw, labels->names[0], false, r);
     plate(draw, labels->names[1], true, r);
-    wins_placeholder(draw, false, r);
-    wins_placeholder(draw, true, r);
+    wins_counter(draw, false, labels->wins[0], r);
+    wins_counter(draw, true, labels->wins[1], r);
     draw->PopClipRect();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
