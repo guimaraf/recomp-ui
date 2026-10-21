@@ -210,6 +210,33 @@ void plate(ImDrawList *draw, const char *name, bool right, const int r[4]) {
     draw->AddText(font, size, ImVec2(at.x, at.y + .5f * sy), IM_COL32(0, 0, 0, 220), name);
     draw->AddText(font, size, at, IM_COL32(246, 248, 252, 255), name);
 }
+// Phase one is a layout preview: no match/round events are counted here.
+void wins_placeholder(ImDrawList *draw, bool right, const int r[4]) {
+    const float sx = r[2] / 512.0f, sy = r[3] / 240.0f;
+    const float width = 26 * sx, height = 12 * sy, slant = 7 * sx;
+    const float name_width = 102 * sx, gap = 4 * sx;
+    const float x = right ? r[0] + r[2] - 14 * sx - name_width - gap - width
+                          : r[0] + 14 * sx + name_width + gap;
+    const float y = r[1] + 10 * sy;
+    ImVec2 points[4] = {{x, y}, {x + width - slant, y},
+                       {x + width, y + height}, {x + slant, y + height}};
+    if (right) {
+        points[0] = ImVec2(x + slant, y); points[1] = ImVec2(x + width, y);
+        points[2] = ImVec2(x + width - slant, y + height); points[3] = ImVec2(x, y + height);
+    }
+    ImVec2 shadow[4];
+    for (int i = 0; i < 4; ++i) shadow[i] = ImVec2(points[i].x, points[i].y + 1.2f * sy);
+    draw->AddConvexPolyFilled(shadow, 4, IM_COL32(0, 0, 0, 125));
+    draw->AddConvexPolyFilled(points, 4, IM_COL32(22, 25, 32, 237));
+    draw->AddPolyline(points, 4, IM_COL32(159, 169, 182, 215),
+                      ImDrawFlags_Closed, std::max(.8f, .45f * sy));
+    ImFont *font = ImGui::GetFont();
+    const float size = 9.6f * sy;
+    const ImVec2 text = font->CalcTextSizeA(size, FLT_MAX, 0, "0");
+    const ImVec2 at(x + (width - text.x) * .5f, y + (height - text.y) * .5f);
+    draw->AddText(font, size, ImVec2(at.x, at.y + .5f * sy), IM_COL32(0, 0, 0, 220), "0");
+    draw->AddText(font, size, at, IM_COL32(255, 238, 32, 255), "0");
+}
 }
 
 extern "C" int recomp_ui_psx_nameplates_init(const char *assets_dir) {
@@ -241,6 +268,8 @@ extern "C" void recomp_ui_psx_nameplates_draw(const PsxHostNameplates *labels,
     draw->PushClipRect(ImVec2((float)r[0], (float)r[1]), ImVec2((float)(r[0]+r[2]), (float)(r[1]+r[3])), true);
     plate(draw, labels->names[0], false, r);
     plate(draw, labels->names[1], true, r);
+    wins_placeholder(draw, false, r);
+    wins_placeholder(draw, true, r);
     draw->PopClipRect();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
